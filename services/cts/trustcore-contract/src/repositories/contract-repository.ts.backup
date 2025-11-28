@@ -1,0 +1,102 @@
+import { randomUUID } from 'crypto';
+import type { Contract, CreateContractInput, UpdateContractInput } from '../types/contract.js';
+
+export class ContractRepository {
+  private contracts: Map<string, Contract> = new Map();
+
+  constructor() {
+    this.initializeMockData();
+  }
+
+  private initializeMockData(): void {
+    const mockContracts: Contract[] = [
+      {
+        id: '660e8400-e29b-41d4-a716-446655440001',
+        providerId: '550e8400-e29b-41d4-a716-446655440001',
+        consumerId: '550e8400-e29b-41d4-a716-446655440002',
+        datasetId: '770e8400-e29b-41d4-a716-446655440001',
+        policyId: '550e8400-e29b-41d4-a716-446655440001',
+        status: 'active',
+        terms: 'Data usage limited to internal analytics only. Data retention: 1 year.',
+        expiresAt: '2026-11-11T00:00:00.000Z',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: '660e8400-e29b-41d4-a716-446655440002',
+        providerId: '550e8400-e29b-41d4-a716-446655440001',
+        consumerId: '550e8400-e29b-41d4-a716-446655440003',
+        datasetId: '770e8400-e29b-41d4-a716-446655440002',
+        policyId: '550e8400-e29b-41d4-a716-446655440002',
+        status: 'negotiating',
+        terms: 'Data usage for research purposes. Anonymized data only.',
+        expiresAt: '2025-12-11T00:00:00.000Z',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: '660e8400-e29b-41d4-a716-446655440003',
+        providerId: '550e8400-e29b-41d4-a716-446655440002',
+        consumerId: '550e8400-e29b-41d4-a716-446655440001',
+        datasetId: '770e8400-e29b-41d4-a716-446655440003',
+        policyId: '550e8400-e29b-41d4-a716-446655440003',
+        status: 'expired',
+        terms: 'Educational use only. No commercial use.',
+        expiresAt: '2025-10-11T00:00:00.000Z',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    mockContracts.forEach((contract) => {
+      this.contracts.set(contract.id, contract);
+    });
+  }
+
+  async create(input: CreateContractInput): Promise<Contract> {
+    const contract: Contract = {
+      id: randomUUID(),
+      ...input,
+      status: input.status || 'draft',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.contracts.set(contract.id, contract);
+    return contract;
+  }
+
+  async findAll(page: number = 1, pageSize: number = 10): Promise<{ data: Contract[]; total: number }> {
+    const allContracts = Array.from(this.contracts.values());
+    const total = allContracts.length;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const data = allContracts.slice(start, end);
+
+    return { data, total };
+  }
+
+  async findById(id: string): Promise<Contract | null> {
+    return this.contracts.get(id) || null;
+  }
+
+  async update(id: string, input: UpdateContractInput): Promise<Contract | null> {
+    const contract = this.contracts.get(id);
+    if (!contract) return null;
+
+    const updated: Contract = {
+      ...contract,
+      ...input,
+      id: contract.id,
+      createdAt: contract.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.contracts.set(id, updated);
+    return updated;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.contracts.delete(id);
+  }
+}

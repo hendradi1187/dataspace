@@ -1,0 +1,34 @@
+{
+  "name": "@dataspace/trustcore-clearing",
+  "version": "1.0.0",
+  "description": "TrustCore Clearing Service - Settlement & Clearing Records",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/index.ts",
+    "build": "tsc",
+    "test": "vitest",
+    "test:cov": "vitest --coverage",
+    "lint": "eslint src test",
+    "fmt": "prettier -w src test"
+  },
+  "dependencies": {
+    "@fastify/cors": "^8.4.2",
+    "@fastify/helmet": "^11.1.1",
+    "@dataspace/validation": "workspace:*",
+    "@dataspace/db": "workspace:*",
+    "fastify": "^4.25.2",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "vitest": "^1.1.0"
+  }
+}

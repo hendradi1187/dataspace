@@ -1,0 +1,65 @@
+openapi: 3.1.0
+info:
+  title: Dataspace API Specification
+  version: 1.1.0
+  description: |
+    API specification for Dataspace Platform
+    - Core Trust Services (CTS)
+    - Connector Edge Nodes
+  contact:
+    name: GhanemTech Architecture Team
+    email: fendi@ghanem.tech
+
+servers:
+  - url: http://localhost
+    description: Development environment
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+
+components:
+  schemas:
+    # Placeholder for API schemas
+    # Add service-specific endpoints and schemas per module
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - code
+        - message
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        service:
+          type: string
+      required:
+        - status
+        - service

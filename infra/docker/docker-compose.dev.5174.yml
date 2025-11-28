@@ -1,0 +1,81 @@
+version: '3.9'
+
+# Override config untuk menjalankan Frontend di port 5174 (Production)
+services:
+  # ============================================================================
+  # Frontend Service - Port 5174 (Production Build)
+  # ============================================================================
+  frontend:
+    image: dataspace-frontend:latest
+    build:
+      context: ../../
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NODE_ENV: production
+        VITE_API_URL: ${VITE_API_URL:-http://localhost}
+        VITE_IDP_API_URL: ${IDP_URL:-http://idp:3000}
+        VITE_BROKER_API_URL: ${BROKER_URL:-http://broker:3001}
+        VITE_HUB_API_URL: ${HUB_URL:-http://hub:3002}
+        VITE_POLICY_API_URL: ${POLICY_URL:-http://trustcore-policy:3003}
+        VITE_CONTRACT_API_URL: ${CONTRACT_URL:-http://trustcore-contract:3004}
+        VITE_COMPLIANCE_API_URL: ${COMPLIANCE_URL:-http://trustcore-compliance:3005}
+        VITE_LEDGER_API_URL: ${LEDGER_URL:-http://trustcore-ledger:3006}
+        VITE_CLEARING_API_URL: ${CLEARING_URL:-http://clearing-cts:3007}
+        VITE_APPSTORE_API_URL: ${APPSTORE_URL:-http://appstore:3008}
+        VITE_CONNECTOR_API_URL: ${CONNECTOR_URL:-http://connector:3009}
+    container_name: dataspace-frontend-prod
+    environment:
+      NODE_ENV: production
+      VITE_API_URL: ${VITE_API_URL:-http://localhost}
+      VITE_IDP_API_URL: ${IDP_URL:-http://idp:3000}
+      VITE_BROKER_API_URL: ${BROKER_URL:-http://broker:3001}
+      VITE_HUB_API_URL: ${HUB_URL:-http://hub:3002}
+      VITE_POLICY_API_URL: ${POLICY_URL:-http://trustcore-policy:3003}
+      VITE_CONTRACT_API_URL: ${CONTRACT_URL:-http://trustcore-contract:3004}
+      VITE_COMPLIANCE_API_URL: ${COMPLIANCE_URL:-http://trustcore-compliance:3005}
+      VITE_LEDGER_API_URL: ${LEDGER_URL:-http://trustcore-ledger:3006}
+      VITE_CLEARING_API_URL: ${CLEARING_URL:-http://clearing-cts:3007}
+      VITE_APPSTORE_API_URL: ${APPSTORE_URL:-http://appstore:3008}
+      VITE_CONNECTOR_API_URL: ${CONNECTOR_URL:-http://connector:3009}
+    ports:
+      - "5174:5174"
+    depends_on:
+      - idp
+      - broker
+      - hub
+      - trustcore-policy
+      - trustcore-contract
+      - trustcore-compliance
+      - trustcore-ledger
+      - clearing-cts
+      - appstore
+      - connector
+      - trustcore-clearing
+      - trustcore-connector
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5174"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+networks:
+  dataspace-net:
+    driver: bridge

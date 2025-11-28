@@ -1,0 +1,50 @@
+# Development Dockerfile for TrustCore Connector Service
+FROM node:20-alpine
+
+# Install dumb-init for proper signal handling and curl for health checks
+RUN apk add --no-cache dumb-init curl
+
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Set working directory
+WORKDIR /app
+
+# Copy root package.json and pnpm files for workspace
+COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+
+# Copy all service package.json files
+COPY --chown=nodejs:nodejs services/cts/*/package.json ./services/cts/
+COPY --chown=nodejs:nodejs libs/*/package.json ./libs/
+COPY --chown=nodejs:nodejs apps/frontend/package.json ./apps/frontend/
+
+# Create directory structure for libs
+RUN mkdir -p libs/validation libs/db libs/clients libs/messages
+
+# Install all dependencies from lock file (workspace mode)
+RUN pnpm install --no-frozen-lockfile
+
+# Copy libs source code
+COPY --chown=nodejs:nodejs libs ./libs
+
+# Copy service source code
+COPY --chown=nodejs:nodejs services/cts/trustcore-connector ./services/cts/trustcore-connector
+
+# Install service-specific node_modules
+RUN pnpm -C services/cts/trustcore-connector install --no-frozen-lockfile
+
+# Switch to non-root user
+USER nodejs
+
+# Set entrypoint for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Expose port
+EXPOSE 3011
+
+# Start command
+CMD ["pnpm", "-C", "services/cts/trustcore-connector", "dev"]
