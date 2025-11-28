@@ -1,0 +1,113 @@
+# Production Dockerfile for Microservices (Dataspace Services)
+# Supports building any service from services/cts/* directory
+# Usage: docker build --build-arg SERVICE_NAME=idp --build-arg PORT=3000 -t dataspace-idp:latest .
+
+# Stage 1: Builder
+FROM node:20-alpine AS builder
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init curl
+
+# Accept build arguments
+ARG SERVICE_NAME
+ARG PORT=3000
+ARG NODE_ENV=production
+
+# Set environment variables
+ENV SERVICE_NAME=$SERVICE_NAME
+ENV PORT=$PORT
+ENV NODE_ENV=$NODE_ENV
+
+# Set working directory
+WORKDIR /app
+
+# Copy workspace configuration files
+COPY --chown=root:root pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+
+# Create directory structure for libs
+RUN mkdir -p libs/validation libs/db libs/clients libs/messages libs/errors libs/types
+
+# Copy root package.json
+COPY --chown=root:root package.json ./
+
+# Copy all service package.json files (for workspace resolution)
+COPY --chown=root:root services/cts/*/package.json ./services/cts/
+
+# Copy libs package.json files
+COPY --chown=root:root libs/*/package.json ./libs/ 2>/dev/null || true
+
+# Install all workspace dependencies
+RUN pnpm install --no-frozen-lockfile
+
+# Copy libs source code
+COPY --chown=root:root libs ./libs
+
+# Copy specific service source code
+COPY --chown=root:root services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
+
+# Install service-specific dependencies (if needed)
+RUN pnpm -C services/cts/$SERVICE_NAME install --no-frozen-lockfile 2>/dev/null || true
+
+# Build service if build script exists
+RUN pnpm -C services/cts/$SERVICE_NAME run build 2>/dev/null || true
+
+# Stage 2: Runtime
+FROM node:20-alpine
+
+# Install dumb-init for proper signal handling and curl for health checks
+RUN apk add --no-cache dumb-init curl
+
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Install pnpm globally in runtime
+RUN npm install -g pnpm@latest
+
+# Accept runtime arguments
+ARG SERVICE_NAME
+ARG PORT=3000
+ARG NODE_ENV=production
+
+# Set environment variables
+ENV SERVICE_NAME=$SERVICE_NAME
+ENV PORT=$PORT
+ENV NODE_ENV=$NODE_ENV
+ENV PATH=/app/node_modules/.bin:$PATH
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY --chown=nodejs:nodejs pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+
+# Copy libs directory structure
+COPY --chown=nodejs:nodejs --from=builder /app/libs ./libs
+
+# Copy built service
+COPY --chown=nodejs:nodejs --from=builder /app/services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
+
+# Copy node_modules from builder (only production dependencies)
+COPY --chown=nodejs:nodejs --from=builder /app/node_modules ./node_modules
+
+# Install only production dependencies
+RUN pnpm install --prod --no-frozen-lockfile
+
+# Switch to non-root user
+USER nodejs
+
+# Set entrypoint for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Expose port
+EXPOSE $PORT
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:$PORT/health || exit 1
+
+# Default start command (can be overridden in docker-compose)
+CMD ["pnpm", "-C", "services/cts/$SERVICE_NAME", "start"]

@@ -220,7 +220,6 @@ services:
         SERVICE_NAME: idp
         PORT: 3000
         NODE_ENV: production
-    container_name: dataspace-idp-prod
     environment:
       NODE_ENV: production
       SERVICE_NAME: idp
@@ -286,7 +285,6 @@ services:
         SERVICE_NAME: broker
         PORT: 3001
         NODE_ENV: production
-    container_name: dataspace-broker-prod
     environment:
       NODE_ENV: production
       SERVICE_NAME: broker
@@ -352,7 +350,6 @@ services:
         SERVICE_NAME: hub
         PORT: 3002
         NODE_ENV: production
-    container_name: dataspace-hub-prod
     environment:
       NODE_ENV: production
       SERVICE_NAME: hub
@@ -1003,7 +1000,6 @@ services:
       args:
         NODE_ENV: production
         VITE_API_URL: http://45.158.126.171
-    container_name: dataspace-frontend-prod
     ports:
       - "45.158.126.171:5174:5174"
     depends_on:
