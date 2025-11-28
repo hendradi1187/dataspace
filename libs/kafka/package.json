@@ -1,0 +1,22 @@
+{
+  "name": "@dataspace/kafka",
+  "version": "1.0.0",
+  "description": "Kafka client and utilities for dataspace services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "keywords": ["kafka", "event-streaming", "dataspace"],
+  "author": "dataspace-team",
+  "license": "MIT"
+}

@@ -1,0 +1,283 @@
+http:
+  routers:
+    # Frontend Router
+    frontend:
+      rule: "Host(`localhost`) || Host(`traefik.localhost`)"
+      entryPoints:
+        - web
+      service: frontend
+      middlewares:
+        - frontend-headers
+        - frontend-compress
+
+    # IDP Service Router
+    idp:
+      rule: "Host(`localhost`) && PathPrefix(`/api/idp`)"
+      entryPoints:
+        - web
+      service: idp
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Broker Service Router
+    broker:
+      rule: "Host(`localhost`) && PathPrefix(`/api/broker`)"
+      entryPoints:
+        - web
+      service: broker
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Hub Service Router
+    hub:
+      rule: "Host(`localhost`) && PathPrefix(`/api/hub`)"
+      entryPoints:
+        - web
+      service: hub
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Policy Service Router
+    policy:
+      rule: "Host(`localhost`) && PathPrefix(`/api/policy`)"
+      entryPoints:
+        - web
+      service: policy
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Contract Service Router
+    contract:
+      rule: "Host(`localhost`) && PathPrefix(`/api/contract`)"
+      entryPoints:
+        - web
+      service: contract
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Compliance Service Router
+    compliance:
+      rule: "Host(`localhost`) && PathPrefix(`/api/compliance`)"
+      entryPoints:
+        - web
+      service: compliance
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Ledger Service Router
+    ledger:
+      rule: "Host(`localhost`) && PathPrefix(`/api/ledger`)"
+      entryPoints:
+        - web
+      service: ledger
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Clearing Service Router
+    clearing:
+      rule: "Host(`localhost`) && PathPrefix(`/api/clearing`)"
+      entryPoints:
+        - web
+      service: clearing
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # AppStore Service Router
+    appstore:
+      rule: "Host(`localhost`) && PathPrefix(`/api/appstore`)"
+      entryPoints:
+        - web
+      service: appstore
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Connector Service Router
+    connector:
+      rule: "Host(`localhost`) && PathPrefix(`/api/connector`)"
+      entryPoints:
+        - web
+      service: connector
+      middlewares:
+        - api-headers
+        - rate-limit
+        - strip-prefix
+
+    # Traefik Dashboard
+    dashboard:
+      rule: "Host(`traefik.localhost`)"
+      entryPoints:
+        - web
+      service: api@internal
+      middlewares:
+        - dashboard-auth
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:5174"
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 10s
+
+    idp:
+      loadBalancer:
+        servers:
+          - url: "http://idp:3000"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    broker:
+      loadBalancer:
+        servers:
+          - url: "http://broker:3001"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    hub:
+      loadBalancer:
+        servers:
+          - url: "http://hub:3002"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    policy:
+      loadBalancer:
+        servers:
+          - url: "http://trustcore-policy:3003"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    contract:
+      loadBalancer:
+        servers:
+          - url: "http://trustcore-contract:3004"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    compliance:
+      loadBalancer:
+        servers:
+          - url: "http://trustcore-compliance:3005"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    ledger:
+      loadBalancer:
+        servers:
+          - url: "http://trustcore-ledger:3006"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    clearing:
+      loadBalancer:
+        servers:
+          - url: "http://clearing-cts:3007"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    appstore:
+      loadBalancer:
+        servers:
+          - url: "http://appstore:3008"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+    connector:
+      loadBalancer:
+        servers:
+          - url: "http://connector:3009"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+  middlewares:
+    # Frontend specific headers
+    frontend-headers:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=3600"
+          X-Frame-Options: "SAMEORIGIN"
+          X-Content-Type-Options: "nosniff"
+          X-XSS-Protection: "1; mode=block"
+
+    # API specific headers
+    api-headers:
+      headers:
+        customResponseHeaders:
+          X-API-Version: "1.0.0"
+          X-Dataspace-Service: "true"
+        customRequestHeaders:
+          X-Forwarded-Host: "localhost"
+          X-Forwarded-Proto: "http"
+
+    # Gzip compression
+    frontend-compress:
+      compress:
+        minResponseBodyBytes: 1000
+
+    # Rate limiting (requests per second)
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
+
+    # Strip prefix from path
+    strip-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api/idp"
+          - "/api/broker"
+          - "/api/hub"
+          - "/api/policy"
+          - "/api/contract"
+          - "/api/compliance"
+          - "/api/ledger"
+          - "/api/clearing"
+          - "/api/appstore"
+          - "/api/connector"
+
+    # Dashboard authentication (basic auth)
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$ItVG2cAJ$ubNRN0jmyA7Z9vMzDN7Pu/"  # admin:admin

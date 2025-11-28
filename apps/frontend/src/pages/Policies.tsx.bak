@@ -1,0 +1,101 @@
+import { useListData } from '@hooks/useListData';
+import { policiesService } from '@/services/policies-service';
+import { DataTable } from '@components/DataTable';
+import { StatusBadge } from '@components/Badge';
+import { Button } from '@components/Button';
+import { Plus } from 'lucide-react';
+import { useNotificationStore } from '@stores/notification-store';
+import type { Policy } from '@types';
+
+export const Policies = () => {
+  const { addNotification } = useNotificationStore();
+
+  const {
+    data,
+    isLoading,
+    error,
+    currentPage,
+    currentPageSize,
+    searchQuery,
+    sortField,
+    sortOrder,
+    totalPages,
+    handlePageChange,
+    handleSearch,
+    handlePageSizeChange,
+    handleSort,
+  } = useListData((params) => policiesService.list(params), {
+    pageSize: 10,
+  });
+
+  // Show error notifications
+  if (error) {
+    addNotification({
+      type: 'error',
+      title: 'Error',
+      message: error,
+    });
+  }
+
+  const columns = [
+    {
+      key: 'name' as const,
+      label: 'Policy Name',
+      sortable: true,
+    },
+    {
+      key: 'description' as const,
+      label: 'Description',
+      sortable: false,
+      render: (value: string) => (
+        <div className="max-w-xs truncate" title={value}>
+          {value}
+        </div>
+      ),
+    },
+    {
+      key: 'status' as const,
+      label: 'Status',
+      sortable: true,
+      render: (value: string) => <StatusBadge status={value} />,
+    },
+    {
+      key: 'createdAt' as const,
+      label: 'Created',
+      sortable: true,
+      render: (value: string) => new Date(value).toLocaleDateString(),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-neutral-900">Policies</h1>
+          <p className="text-neutral-600 mt-2">Manage access and usage policies</p>
+        </div>
+        <Button icon={<Plus size={16} />}>Create Policy</Button>
+      </div>
+
+      <DataTable<Policy>
+        items={data}
+        columns={columns}
+        title="All Policies"
+        isLoading={isLoading}
+        pageSize={currentPageSize}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSort={handleSort}
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onRowClick={(policy) => {
+          window.location.href = `/policies/${policy.id}`;
+        }}
+      />
+    </div>
+  );
+};

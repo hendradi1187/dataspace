@@ -1,0 +1,134 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+# Note: pnpm-lock.yaml is needed for Docker builds, so it's not excluded
+
+# Build outputs
+build
+# Note: dist is needed for Docker builds, so it's not excluded
+*.tgz
+
+# Development
+.env.local
+.env.*.local
+.env.development
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.nyc_output
+coverage
+.junit.xml
+test-results
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+Thumbs.db
+.DS_Store
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.circleci
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+docs
+DOCS
+
+# Examples & Samples
+examples
+samples
+.example
+
+# Temp files
+tmp
+temp
+*.tmp
+
+# Cache
+.eslintcache
+.prettier-cache
+tsconfig.tsbuildinfo
+
+# Secrets
+.env.*.secret
+secrets
+*.key
+*.pem
+
+# Build artifacts
+.turbo
+.cache
+
+# Archive
+*.zip
+*.tar
+*.gz
+
+# Node modules from all directories except we want them built fresh
+**/node_modules
+
+# Frontend build
+apps/*/.vite
+
+# Service builds
+services/**/.turbo
+services/**/.cache
+# Note: dist folders are needed for Docker builds, so they're not excluded
+
+# Database
+db/data
+pgdata
+*.sql.bak
+
+# Logs directory
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.orig
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+test/
+
+# Tools
+tools/
+PROMPTS/
+
+# Development scripts
+scripts/dev
+scripts/local
+
+# IDE config (local)
+.vscode/settings.json
+.idea/workspace.xml
+

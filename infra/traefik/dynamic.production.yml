@@ -1,0 +1,421 @@
+# ============================================================================
+# Traefik Dynamic Configuration for Production
+# Server: 45.158.126.171
+# ============================================================================
+
+http:
+  # ============================================================================
+  # Routers
+  # ============================================================================
+  routers:
+    # Frontend Router
+    frontend:
+      entryPoints:
+        - web
+        - websecure
+      service: frontend
+      rule: "Host(`45.158.126.171`)"
+      priority: 1
+      tls:
+        certResolver: letsencrypt
+
+    # IDP Router
+    idp:
+      entryPoints:
+        - web
+        - websecure
+      service: idp
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/idp`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Broker Router
+    broker:
+      entryPoints:
+        - web
+        - websecure
+      service: broker
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/broker`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Hub Router
+    hub:
+      entryPoints:
+        - web
+        - websecure
+      service: hub
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/hub`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Policy Router
+    policy:
+      entryPoints:
+        - web
+        - websecure
+      service: policy
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/policy`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Contract Router
+    contract:
+      entryPoints:
+        - web
+        - websecure
+      service: contract
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/contract`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Compliance Router
+    compliance:
+      entryPoints:
+        - web
+        - websecure
+      service: compliance
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/compliance`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Ledger Router
+    ledger:
+      entryPoints:
+        - web
+        - websecure
+      service: ledger
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/ledger`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Clearing Router
+    clearing:
+      entryPoints:
+        - web
+        - websecure
+      service: clearing
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/clearing`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # AppStore Router
+    appstore:
+      entryPoints:
+        - web
+        - websecure
+      service: appstore
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/appstore`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Connector Router
+    connector:
+      entryPoints:
+        - web
+        - websecure
+      service: connector
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/connector`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # TrustCore Clearing Router
+    trustcore-clearing:
+      entryPoints:
+        - web
+        - websecure
+      service: trustcore-clearing
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/trustcore-clearing`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # TrustCore Connector Router
+    trustcore-connector:
+      entryPoints:
+        - web
+        - websecure
+      service: trustcore-connector
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/api/trustcore-connector`)"
+      priority: 10
+      middlewares:
+        - rate-limit@file
+        - cors@file
+      tls:
+        certResolver: letsencrypt
+
+    # Kafka UI Router
+    kafka-ui:
+      entryPoints:
+        - web
+        - websecure
+      service: kafka-ui
+      rule: "Host(`45.158.126.171`) && PathPrefix(`/kafka-ui`)"
+      priority: 10
+      middlewares:
+        - auth@file
+      tls:
+        certResolver: letsencrypt
+
+  # ============================================================================
+  # Services
+  # ============================================================================
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-frontend-prod:5174"
+        healthCheck:
+          path: /
+          interval: 10s
+          timeout: 5s
+
+    idp:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-idp-prod:3000"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    broker:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-broker-prod:3001"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    hub:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-hub-prod:3002"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    policy:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-policy-prod:3003"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    contract:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-contract-prod:3004"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    compliance:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-compliance-prod:3005"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    ledger:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-ledger-prod:3006"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    clearing:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-clearing-prod:3007"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    appstore:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-appstore-prod:3008"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    connector:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-connector-prod:3009"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    trustcore-clearing:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-trustcore-clearing-prod:3010"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    trustcore-connector:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-trustcore-connector-prod:3011"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 10s
+
+    kafka-ui:
+      loadBalancer:
+        servers:
+          - url: "http://dataspace-kafka-ui-prod:8080"
+
+  # ============================================================================
+  # Middlewares
+  # ============================================================================
+  middlewares:
+    # Rate Limiting
+    rate-limit:
+      rateLimit:
+        average: 100
+        period: 1m
+        burst: 20
+
+    # CORS Headers
+    cors:
+      headers:
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlExposeHeaders:
+          - "*"
+        accessControlMaxAge: 86400
+        accessControlAllowCredentials: true
+
+    # Basic Auth (for Kafka UI)
+    auth:
+      basicAuth:
+        users:
+          - "admin:$2y$10$erQvLhKk/8jAkLV0z7BRuON3dLeYS6LfGCyPXTYwpCaP8M8MR0OOy"  # password: admin
+
+    # Security Headers
+    security-headers:
+      headers:
+        sslRedirect: true
+        sslHost: "45.158.126.171:443"
+        sslForceHost: false
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customFrameOptionsValue: "DENY"
+        customRequestHeaders:
+          X-Powered-By: ""
+          Server: ""
+
+    # Compression
+    compression:
+      compress:
+        minResponseBodyBytes: 1000
+
+    # Request ID
+    request-id:
+      headers:
+        X-Request-ID: "true"
+
+# ============================================================================
+# TCP Configuration (untuk non-HTTP services jika diperlukan)
+# ============================================================================
+tcp:
+  routers:
+    postgres:
+      entryPoints:
+        - postgresql
+      service: postgres-service
+      rule: "HostSNI(`*`)"
+      tls:
+        passthrough: false
+
+  services:
+    postgres-service:
+      loadBalancer:
+        servers:
+          - address: "dataspace-postgres-prod:5432"
+
+# ============================================================================
+# UDP Configuration (untuk DNS, jika diperlukan)
+# ============================================================================
+udp:
+  routers:
+    # Jika perlu UDP services
+
+  services:
+    # Service definitions

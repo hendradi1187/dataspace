@@ -1,0 +1,92 @@
+# ============================================================================
+# Traefik Configuration for Production
+# Server: 45.158.126.171
+# ============================================================================
+
+# Global Configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# Entrypoints
+entryPoints:
+  web:
+    address: "45.158.126.171:80"
+    http:
+      redirections:
+        entrypoint:
+          scheme: https
+          permanent: false
+
+  websecure:
+    address: "45.158.126.171:443"
+    http:
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "45.158.126.171"
+
+  traefik:
+    address: "45.158.126.171:8080"
+
+# API & Dashboard
+api:
+  insecure: false
+  dashboard: true
+  debug: false
+
+# Metrics
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+# Logging
+log:
+  level: INFO
+  filePath: /var/log/traefik/traefik.log
+  format: json
+
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: json
+  fields:
+    defaultMode: keep
+    names:
+      ClientUsername: drop
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        Authorization: drop
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: dataspace-net
+    watch: true
+    swarmMode: false
+
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+# Certificate Resolvers
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: "admin@example.com"  # ← CHANGE THIS
+      storage: /etc/traefik/acme.json
+      httpChallenge:
+        entryPoint: web
+
+# Self-signed for initial setup (before HTTPS configured)
+  selfsigned:
+    acme:
+      storage: /etc/traefik/acme-self.json
+
+# Pilot (Traefik Cloud)
+pilot:
+  dashboard: false

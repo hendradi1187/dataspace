@@ -1,0 +1,1069 @@
+version: '3.9'
+
+services:
+  # ============================================================================
+  # PostgreSQL Database Service
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: dataspace-postgres-prod
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-dataspace_prod}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "45.158.126.171:5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./../../db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-dataspace_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dataspace-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # ============================================================================
+  # Redis Cache & Session Store
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: dataspace-redis-prod
+    ports:
+      - "45.158.126.171:6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password}", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dataspace-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # ============================================================================
+  # Zookeeper for Kafka Coordination
+  # ============================================================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: dataspace-zookeeper-prod
+    ports:
+      - "45.158.126.171:2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "127.0.0.1", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dataspace-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ============================================================================
+  # Kafka Broker
+  # ============================================================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    container_name: dataspace-kafka-prod
+    ports:
+      - "45.158.126.171:9092:9092"
+      - "45.158.126.171:9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://45.158.126.171:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || echo 'Health check script not found, Kafka should still be operational'"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - dataspace-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # ============================================================================
+  # Kafka UI for Managing Kafka
+  # ============================================================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: dataspace-kafka-ui-prod
+    ports:
+      - "45.158.126.171:8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: dataspace
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - dataspace-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ============================================================================
+  # Traefik Reverse Proxy & API Gateway
+  # ============================================================================
+  traefik:
+    image: traefik:v2.10
+    container_name: dataspace-traefik-prod
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "45.158.126.171:80:80"
+      - "45.158.126.171:443:443"
+      - "45.158.126.171:8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ../traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - traefik_logs_prod:/var/log/traefik
+    networks:
+      - dataspace-net
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ============================================================================
+  # IDP Service (Identity Provider) - Port 3000
+  # ============================================================================
+  idp:
+    image: dataspace-idp:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: idp
+        PORT: 3000
+        NODE_ENV: production
+    container_name: dataspace-idp-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: idp
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: idp-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.idp.rule=Host(`45.158.126.171`) && PathPrefix(`/api/idp`)"
+      - "traefik.http.services.idp.loadbalancer.server.port=3000"
+
+  # ============================================================================
+  # Broker Service - Port 3001
+  # ============================================================================
+  broker:
+    image: dataspace-broker:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: broker
+        PORT: 3001
+        NODE_ENV: production
+    container_name: dataspace-broker-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: broker
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: broker-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.broker.rule=Host(`45.158.126.171`) && PathPrefix(`/api/broker`)"
+      - "traefik.http.services.broker.loadbalancer.server.port=3001"
+
+  # ============================================================================
+  # Hub Service - Port 3002
+  # ============================================================================
+  hub:
+    image: dataspace-hub:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: hub
+        PORT: 3002
+        NODE_ENV: production
+    container_name: dataspace-hub-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: hub
+      PORT: 3002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: hub-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hub.rule=Host(`45.158.126.171`) && PathPrefix(`/api/hub`)"
+      - "traefik.http.services.hub.loadbalancer.server.port=3002"
+
+  # ============================================================================
+  # Policy Service (TrustCore) - Port 3003
+  # ============================================================================
+  trustcore-policy:
+    image: dataspace-trustcore-policy:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: trustcore-policy
+        PORT: 3003
+        NODE_ENV: production
+    container_name: dataspace-policy-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: trustcore-policy
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: policy-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.policy.rule=Host(`45.158.126.171`) && PathPrefix(`/api/policy`)"
+      - "traefik.http.services.policy.loadbalancer.server.port=3003"
+
+  # ============================================================================
+  # Contract Service (TrustCore) - Port 3004
+  # ============================================================================
+  trustcore-contract:
+    image: dataspace-trustcore-contract:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: trustcore-contract
+        PORT: 3004
+        NODE_ENV: production
+    container_name: dataspace-contract-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: trustcore-contract
+      PORT: 3004
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: contract-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.contract.rule=Host(`45.158.126.171`) && PathPrefix(`/api/contract`)"
+      - "traefik.http.services.contract.loadbalancer.server.port=3004"
+
+  # ============================================================================
+  # Compliance Service (TrustCore) - Port 3005
+  # ============================================================================
+  trustcore-compliance:
+    image: dataspace-trustcore-compliance:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: trustcore-compliance
+        PORT: 3005
+        NODE_ENV: production
+    container_name: dataspace-compliance-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: trustcore-compliance
+      PORT: 3005
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: compliance-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.compliance.rule=Host(`45.158.126.171`) && PathPrefix(`/api/compliance`)"
+      - "traefik.http.services.compliance.loadbalancer.server.port=3005"
+
+  # ============================================================================
+  # Ledger Service (TrustCore) - Port 3006
+  # ============================================================================
+  trustcore-ledger:
+    image: dataspace-trustcore-ledger:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: trustcore-ledger
+        PORT: 3006
+        NODE_ENV: production
+    container_name: dataspace-ledger-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: trustcore-ledger
+      PORT: 3006
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: ledger-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ledger.rule=Host(`45.158.126.171`) && PathPrefix(`/api/ledger`)"
+      - "traefik.http.services.ledger.loadbalancer.server.port=3006"
+
+  # ============================================================================
+  # Clearing Service (CTS) - Port 3007
+  # ============================================================================
+  clearing-cts:
+    image: dataspace-clearing:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: clearing
+        PORT: 3007
+        NODE_ENV: production
+    container_name: dataspace-clearing-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: clearing
+      PORT: 3007
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: clearing-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.clearing.rule=Host(`45.158.126.171`) && PathPrefix(`/api/clearing`)"
+      - "traefik.http.services.clearing.loadbalancer.server.port=3007"
+
+  # ============================================================================
+  # AppStore Service - Port 3008
+  # ============================================================================
+  appstore:
+    image: dataspace-appstore:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: appstore
+        PORT: 3008
+        NODE_ENV: production
+    container_name: dataspace-appstore-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: appstore
+      PORT: 3008
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: appstore-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3008:3008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.appstore.rule=Host(`45.158.126.171`) && PathPrefix(`/api/appstore`)"
+      - "traefik.http.services.appstore.loadbalancer.server.port=3008"
+
+  # ============================================================================
+  # Connector Service - Port 3009
+  # ============================================================================
+  connector:
+    image: dataspace-connector:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: connector
+        PORT: 3009
+        NODE_ENV: production
+    container_name: dataspace-connector-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: connector
+      PORT: 3009
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: connector-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3009:3009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.connector.rule=Host(`45.158.126.171`) && PathPrefix(`/api/connector`)"
+      - "traefik.http.services.connector.loadbalancer.server.port=3009"
+
+  # ============================================================================
+  # TrustCore Clearing Service - Port 3010
+  # ============================================================================
+  trustcore-clearing:
+    image: dataspace-trustcore-clearing:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: trustcore-clearing
+        PORT: 3010
+        NODE_ENV: production
+    container_name: dataspace-trustcore-clearing-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: trustcore-clearing
+      PORT: 3010
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: trustcore-clearing-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ============================================================================
+  # TrustCore Connector Service - Port 3011
+  # ============================================================================
+  trustcore-connector:
+    image: dataspace-trustcore-connector:latest
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: trustcore-connector
+        PORT: 3011
+        NODE_ENV: production
+    container_name: dataspace-trustcore-connector-prod
+    environment:
+      NODE_ENV: production
+      SERVICE_NAME: trustcore-connector
+      PORT: 3011
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-dataspace_prod}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
+      KAFKA_CLIENT_ID: trustcore-connector-service
+      LOG_LEVEL: info
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    ports:
+      - "45.158.126.171:3011:3011"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ============================================================================
+  # Frontend Service - Port 5174
+  # ============================================================================
+  frontend:
+    image: dataspace-frontend:latest
+    build:
+      context: ../../
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NODE_ENV: production
+        VITE_API_URL: http://45.158.126.171
+    container_name: dataspace-frontend-prod
+    ports:
+      - "45.158.126.171:5174:5174"
+    depends_on:
+      - idp
+      - broker
+      - hub
+      - trustcore-policy
+      - trustcore-contract
+      - trustcore-compliance
+      - trustcore-ledger
+      - clearing-cts
+      - appstore
+      - connector
+      - trustcore-clearing
+      - trustcore-connector
+    networks:
+      - dataspace-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5174"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`45.158.126.171`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=5174"
+
+# ============================================================================
+# Volumes Configuration
+# ============================================================================
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+  traefik_logs_prod:
+    driver: local
+
+# ============================================================================
+# Networks Configuration
+# ============================================================================
+networks:
+  dataspace-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

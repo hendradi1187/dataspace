@@ -1,0 +1,27 @@
+# Base development image for Node.js services in a pnpm monorepo
+FROM node:20-alpine
+
+# Install dumb-init for proper signal handling and curl for health checks
+RUN apk add --no-cache dumb-init curl
+
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Install pnpm globally
+RUN npm install -g pnpm@latest
+
+# Set working directory
+WORKDIR /app
+
+# Copy pnpm workspace configuration
+COPY --chown=nodejs:nodejs pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+
+# Copy libs folder (internal packages)
+COPY --chown=nodejs:nodejs libs ./libs
+
+# Switch to non-root user
+USER nodejs
+
+# Set entrypoint for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]

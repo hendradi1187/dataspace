@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "rangav.vscode-thunder-client",
+    "ms-vscode.vscode-typescript-next",
+    "GitHub.copilot",
+    "eamodio.gitlens",
+    "ms-docker.docker",
+    "cweijan.vscode-database-client2",
+    "redhat.vscode-yaml",
+    "42Crunch.vscode-openapi"
+  ]
+}

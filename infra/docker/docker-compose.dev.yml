@@ -1,0 +1,499 @@
+version: '3.9'
+
+services:
+
+
+  # PostgreSQL Database Service
+  postgres:
+    image: postgres:16-alpine
+    container_name: dataspace-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dataspace_dev
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./../../db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dataspace_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # IDP Service (Identity Provider) - Port 3000
+  idp:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/idp/Dockerfile.dev
+    container_name: dataspace-idp
+    environment:
+      SERVICE_NAME: idp
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/idp/src:/app/services/cts/idp/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  broker:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/broker/Dockerfile.dev
+    container_name: dataspace-broker
+    environment:
+      SERVICE_NAME: broker
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/broker/src:/app/services/cts/broker/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # Hub Service - Port 3002
+  hub:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/hub/Dockerfile.dev
+    container_name: dataspace-hub
+    environment:
+      SERVICE_NAME: hub
+      PORT: 3002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/hub/src:/app/services/cts/hub/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # Policy Service (TrustCore) - Port 3003
+  trustcore-policy:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/trustcore-policy/Dockerfile.dev
+    container_name: dataspace-policy
+    environment:
+      SERVICE_NAME: trustcore-policy
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/trustcore-policy/src:/app/services/cts/trustcore-policy/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  trustcore-contract:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/trustcore-contract/Dockerfile.dev
+    container_name: dataspace-contract
+    environment:
+      SERVICE_NAME: trustcore-contract
+      PORT: 3004
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/trustcore-contract/src:/app/services/cts/trustcore-contract/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # Compliance Service (TrustCore) - Port 3005
+  trustcore-compliance:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/trustcore-compliance/Dockerfile.dev
+    container_name: dataspace-compliance
+    environment:
+      SERVICE_NAME: trustcore-compliance
+      PORT: 3005
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/trustcore-compliance/src:/app/services/cts/trustcore-compliance/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  trustcore-ledger:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/trustcore-ledger/Dockerfile.dev
+    container_name: dataspace-ledger
+    environment:
+      SERVICE_NAME: trustcore-ledger
+      PORT: 3006
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/trustcore-ledger/src:/app/services/cts/trustcore-ledger/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # Clearing Service (CTS) - Port 3007
+  clearing-cts:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/clearing/Dockerfile.dev
+    container_name: dataspace-clearing
+    environment:
+      SERVICE_NAME: clearing
+      PORT: 3007
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/clearing/src:/app/services/cts/clearing/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # AppStore Service - Port 3008
+  appstore:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/appstore/Dockerfile.dev
+    container_name: dataspace-appstore
+    environment:
+      SERVICE_NAME: appstore
+      PORT: 3008
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3008:3008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/appstore/src:/app/services/cts/appstore/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # Connector Service - Port 3009
+  connector:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/connector/Dockerfile.dev
+    container_name: dataspace-connector
+    environment:
+      SERVICE_NAME: connector
+      PORT: 3009
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3009:3009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/connector/src:/app/services/cts/connector/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # TrustCore Clearing Service - Port 3010
+  trustcore-clearing:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/trustcore-clearing/Dockerfile.dev
+    container_name: dataspace-trustcore-clearing
+    environment:
+      SERVICE_NAME: trustcore-clearing
+      PORT: 3010
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3010:3010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/trustcore-clearing/src:/app/services/cts/trustcore-clearing/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # TrustCore Connector Service - Port 3011
+  trustcore-connector:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: services/cts/trustcore-connector/Dockerfile.dev
+    container_name: dataspace-trustcore-connector
+    environment:
+      SERVICE_NAME: trustcore-connector
+      PORT: 3011
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: dataspace_dev
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      LOG_LEVEL: debug
+      NODE_ENV: development
+    ports:
+      - "3011:3011"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../../services/cts/trustcore-connector/src:/app/services/cts/trustcore-connector/src
+      - ../../logs:/app/logs
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3011/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+
+  # Frontend Service - Port 5174
+  frontend:
+    build:
+      context: ../../ # Build from monorepo root
+      dockerfile: apps/frontend/Dockerfile.dev
+    container_name: dataspace-frontend
+    environment: # Added environment variables for consistency
+      SERVICE_NAME: frontend
+      PORT: 5174
+      NODE_ENV: development
+    ports:
+      - "5174:5174"
+    depends_on:
+      - idp
+      - broker
+      - hub
+      - trustcore-policy
+      - trustcore-contract
+      - trustcore-compliance
+      - trustcore-ledger
+      - clearing-cts
+      - appstore
+      - connector
+      - trustcore-clearing
+      - trustcore-connector
+    volumes:
+      - ./apps/frontend/src:/app/src # Mount service's src for hot-reloading
+      - ./logs:/app/logs # Mount logs from host
+    networks:
+      - dataspace-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5174"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  dataspace-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

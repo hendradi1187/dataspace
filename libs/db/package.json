@@ -1,0 +1,27 @@
+{
+  "name": "@dataspace/db",
+  "version": "1.0.0",
+  "description": "Shared database utilities - pg Pool, migrations helpers",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "lint": "eslint src test",
+    "fmt": "prettier -w src test"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/pg": "^8.11.2",
+    "typescript": "^5.3.3",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "vitest": "^1.1.0"
+  }
+}

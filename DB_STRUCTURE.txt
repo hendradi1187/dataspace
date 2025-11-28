@@ -1,0 +1,192 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                    DATASPACE DATABASE STRUCTURE                              ║
+║                     PostgreSQL Local Configuration                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+CONNECTION DETAILS:
+├─ Host:     localhost
+├─ Port:     5432
+├─ Database: dataspace_dev
+├─ User:     postgres
+├─ Password: postgres
+└─ Type:     PostgreSQL (No Docker)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         DATABASE TABLES (15)                                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+CORE MANAGEMENT (6 tables):
+├─ participants (organizations in dataspace)
+├─ datasets (data assets)
+├─ schemas (data structure definitions)
+├─ policies (access control rules)
+├─ policy_rules (individual rules)
+└─ contracts (data sharing agreements)
+
+TRANSACTIONS & SETTLEMENT (2 tables):
+├─ transactions (immutable ledger)
+└─ clearing_records (settlement records)
+
+COMPLIANCE & MONITORING (2 tables):
+├─ compliance_records (audit findings)
+└─ service_health (system health)
+
+DATA CONNECTIONS (2 tables):
+├─ connectors (data source connections)
+└─ apps (connector applications)
+
+REFERENCES (3 tables):
+├─ vocabularies (semantic terms)
+├─ audit_logs (activity tracking)
+└─ system_config (system settings)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                           RELATIONSHIPS                                      ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Participant ──┬──→ Datasets (owns)
+              ├──→ Contracts (as provider)
+              ├──→ Contracts (as consumer)
+              ├──→ Connectors (operates)
+              └──→ Transactions (participant)
+
+Dataset ──┬──→ Schema (references structure)
+          ├──→ Contracts (specified in)
+          ├──→ Transactions (source)
+          └──→ Compliance Records (subject)
+
+Contract ──┬──→ Participants (provider + consumer)
+           ├──→ Dataset (data)
+           ├──→ Policy (rules)
+           ├──→ Transactions (generates)
+           └──→ Clearing Records (generates)
+
+Policy ───┬──→ Policy Rules (contains)
+          └──→ Contracts (applied to)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        FILE STRUCTURE                                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+dataspace/
+├── .env                                (Environment variables - READY)
+├── .env.example                        (Template)
+├── DATABASE_SETUP_SUMMARY.md          (START HERE - Full summary)
+├── DB_STRUCTURE.txt                   (This file - Visual reference)
+│
+└── db/
+    ├── config/
+    │   ├── database.ts                (Connection pool)
+    │   └── index.ts                   (Exports)
+    │
+    ├── schema/
+    │   ├── 01-core-tables.sql        (Main schema - 15 tables)
+    │   └── SCHEMA_DOCUMENTATION.md   (Detailed docs with ERD)
+    │
+    ├── migrations/
+    │   └── 001_initial_setup.sql     (Migration script)
+    │
+    ├── seeds/
+    │   └── 001_sample_data.sql       (Sample data - 30+ records)
+    │
+    ├── README.md                      (Quick reference guide)
+    └── SETUP.md                       (Setup & troubleshooting)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      QUICK START (3 COMMANDS)                                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+1. Create Database:
+   createdb -U postgres dataspace_dev
+
+2. Initialize Schema:
+   psql -U postgres -d dataspace_dev -f db/schema/01-core-tables.sql
+
+3. Load Sample Data (Optional):
+   psql -U postgres -d dataspace_dev -f db/seeds/001_sample_data.sql
+
+✅ Done! Your database is ready.
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      SAMPLE DATA STATISTICS                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+When you load 001_sample_data.sql, you get:
+├─ 5 Participants (organizations)
+├─ 4 Datasets (data assets)
+├─ 3 Schemas (data structure definitions)
+├─ 3 Policies (access control rules)
+├─ 4 Policy Rules
+├─ 3 Contracts (data sharing agreements)
+├─ 4 Transactions (ledger entries)
+├─ 2 Clearing Records (settlement)
+├─ 2 Compliance Records (audit findings)
+├─ 3 Connectors (data source connections)
+├─ 3 Apps (connector applications)
+├─ 4 Audit Logs (activity history)
+└─ 6 Service Health records
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      KEY FEATURES                                            ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+✅ Complete Schema          - 15 tables covering all dataspace operations
+✅ Relationships            - Foreign keys with cascading deletes
+✅ Indexing                 - Performance-optimized indexes
+✅ Audit Trail              - Every change tracked in audit_logs
+✅ Immutable Ledger         - Transactions append-only for integrity
+✅ JSONB Support            - Flexible schemas without migrations
+✅ Type Safety              - CHECK constraints on status fields
+✅ Sample Data              - 30+ records for testing
+✅ UUID Primary Keys        - Distributed ID generation
+✅ Full Timestamps          - All tables with timezone-aware timestamps
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      CONFIGURATION                                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Your Configuration:
+✅ Host:     localhost          (local setup)
+✅ Port:     5432              (default PostgreSQL)
+✅ Database: dataspace_dev     (correct)
+✅ Username: postgres          (your user)
+✅ Password: postgres          (your password)
+✅ No Docker                   (as requested)
+
+Environment Variables (.env):
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=dataspace_dev
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_MAX_CONNECTIONS=20
+
+Connection String:
+postgresql://postgres:postgres@localhost:5432/dataspace_dev
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      DOCUMENTATION GUIDE                                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+1. DATABASE_SETUP_SUMMARY.md  (Overview & validation - READ FIRST)
+2. db/README.md               (Quick reference & Node.js integration)
+3. db/SETUP.md                (Detailed setup & troubleshooting)
+4. db/schema/SCHEMA_DOCUMENTATION.md (Complete schema reference)
+5. This file                  (Visual structure reference)
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      NEXT STEPS                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+1. Read DATABASE_SETUP_SUMMARY.md
+2. Run the 3 Quick Start commands
+3. Read db/SETUP.md for verification steps
+4. Read db/README.md for integration guide
+5. Integrate into your Node.js services
+6. Start using the database!
+
+═══════════════════════════════════════════════════════════════════════════════
+Generated: 16 November 2024
+Version: 1.0.0
+Status: Ready for Use ✅
+═══════════════════════════════════════════════════════════════════════════════

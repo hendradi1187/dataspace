@@ -1,0 +1,37 @@
+{
+  "name": "dataspace",
+  "version": "1.0.0",
+  "description": "Dataspace Platform - Core Trust Services (CTS) + Connector Monorepo",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "services/cts/idp",
+    "services/cts/broker",
+    "services/cts/hub",
+    "services/cts/trustcore-policy",
+    "services/cts/trustcore-contract",
+    "services/cts/trustcore-compliance",
+    "services/cts/trustcore-ledger",
+    "services/cts/trustcore-clearing",
+    "services/cts/trustcore-connector",
+    "services/cts/clearing",
+    "services/cts/appstore",
+    "services/cts/connector",
+    "libs/validation",
+    "libs/db",
+    "libs/clients",
+    "libs/messages",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev:up": "docker compose -f docker-compose.dev.yml up -d",
+    "dev:down": "docker compose -f docker-compose.dev.yml down -v",
+    "lint": "eslint .",
+    "fmt": "prettier -w .",
+    "gen:clients": "openapi-generator-cli generate -i schema/openapi/dataspace-openapi-components-v1.1.yaml -g typescript-axios -o libs/clients --skip-validate-spec"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@dataspace/messages",
+  "version": "1.0.0",
+  "description": "TypeScript type definitions from JSON Schemas",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,21 @@
+packages:
+  - services/cts/idp
+  - services/cts/broker
+  - services/cts/hub
+  - services/cts/trustcore-policy
+  - services/cts/trustcore-contract
+  - services/cts/trustcore-compliance
+  - services/cts/trustcore-ledger
+  - services/cts/trustcore-clearing
+  - services/cts/trustcore-connector
+  - services/cts/clearing
+  - services/cts/appstore
+  - services/cts/connector
+  - libs/validation
+  - libs/db
+  - libs/clients
+  - libs/messages
+  - apps/frontend
+
+ignoredBuiltDependencies:
+  - esbuild

@@ -1,0 +1,22 @@
+{
+  "name": "@dataspace/redis",
+  "version": "1.0.0",
+  "description": "Redis client and caching utilities for dataspace services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "redis": "^4.6.13",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  },
+  "keywords": ["redis", "caching", "session", "dataspace"],
+  "author": "dataspace-team",
+  "license": "MIT"
+}

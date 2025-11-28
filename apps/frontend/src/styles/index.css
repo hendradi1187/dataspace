@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Root Styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900;
+}
+
+/* Utility Classes */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.slide-in-from-right-4 {
+  animation: slideInFromRight 0.3s ease-in-out;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Form Elements */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='url'],
+textarea,
+select {
+  @apply border-neutral-300 focus:border-primary-500 focus:ring-primary-500 focus:ring-1;
+}
+
+/* Link Styles */
+a {
+  @apply text-primary-600 hover:text-primary-700 transition-colors;
+}
+
+/* Focus Styles */
+:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-primary-500;
+}
+
+/* Responsive Typography */
+@layer components {
+  .text-xs {
+    @apply text-[0.75rem];
+  }
+
+  .text-sm {
+    @apply text-[0.875rem];
+  }
+
+  .text-base {
+    @apply text-[1rem];
+  }
+
+  .text-lg {
+    @apply text-[1.125rem];
+  }
+
+  .text-xl {
+    @apply text-[1.25rem];
+  }
+
+  .text-2xl {
+    @apply text-[1.5rem];
+  }
+
+  .text-3xl {
+    @apply text-[1.875rem];
+  }
+
+  .text-4xl {
+    @apply text-[2.25rem];
+  }
+}
