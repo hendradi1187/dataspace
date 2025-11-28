@@ -13,7 +13,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-dataspace_prod}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "45.158.126.171:5432:5432"
+      - "0.0.0.0:5432:5432"
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
       - ./../../db/init:/docker-entrypoint-initdb.d:ro
@@ -47,7 +47,7 @@ services:
     image: redis:7-alpine
     container_name: dataspace-redis-prod
     ports:
-      - "45.158.126.171:6379:6379"
+      - "0.0.0.0:6379:6379"
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
     volumes:
       - redis_data_prod:/data
@@ -78,7 +78,7 @@ services:
     image: confluentinc/cp-zookeeper:7.5.3
     container_name: dataspace-zookeeper-prod
     ports:
-      - "45.158.126.171:2181:2181"
+      - "0.0.0.0:2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -108,8 +108,8 @@ services:
     image: confluentinc/cp-kafka:7.5.3
     container_name: dataspace-kafka-prod
     ports:
-      - "45.158.126.171:9092:9092"
-      - "45.158.126.171:9101:9101"
+      - "0.0.0.0:9092:9092"
+      - "0.0.0.0:9101:9101"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -154,7 +154,7 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: dataspace-kafka-ui-prod
     ports:
-      - "45.158.126.171:8080:8080"
+      - "0.0.0.0:8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: dataspace
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -180,9 +180,9 @@ services:
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     ports:
-      - "45.158.126.171:80:80"
-      - "45.158.126.171:443:443"
-      - "45.158.126.171:8081:8080"
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+      - "0.0.0.0:8081:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ../traefik/traefik.yml:/etc/traefik/traefik.yml:ro
@@ -237,7 +237,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3000:3000"
+      - "0.0.0.0:3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -302,7 +302,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3001:3001"
+      - "0.0.0.0:3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -367,7 +367,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3002:3002"
+      - "0.0.0.0:3002:3002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -433,7 +433,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3003:3003"
+      - "0.0.0.0:3003:3003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -499,7 +499,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3004:3004"
+      - "0.0.0.0:3004:3004"
     depends_on:
       postgres:
         condition: service_healthy
@@ -565,7 +565,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3005:3005"
+      - "0.0.0.0:3005:3005"
     depends_on:
       postgres:
         condition: service_healthy
@@ -631,7 +631,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3006:3006"
+      - "0.0.0.0:3006:3006"
     depends_on:
       postgres:
         condition: service_healthy
@@ -697,7 +697,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3007:3007"
+      - "0.0.0.0:3007:3007"
     depends_on:
       postgres:
         condition: service_healthy
@@ -763,7 +763,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3008:3008"
+      - "0.0.0.0:3008:3008"
     depends_on:
       postgres:
         condition: service_healthy
@@ -829,7 +829,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3009:3009"
+      - "0.0.0.0:3009:3009"
     depends_on:
       postgres:
         condition: service_healthy
@@ -895,7 +895,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3010:3010"
+      - "0.0.0.0:3010:3010"
     depends_on:
       postgres:
         condition: service_healthy
@@ -957,7 +957,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "45.158.126.171:3011:3011"
+      - "0.0.0.0:3011:3011"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1000,8 +1000,20 @@ services:
       args:
         NODE_ENV: production
         VITE_API_URL: http://45.158.126.171
+        VITE_IDP_API_URL: http://45.158.126.171:3000
+        VITE_BROKER_API_URL: http://45.158.126.171:3001
+        VITE_HUB_API_URL: http://45.158.126.171:3002
+        VITE_POLICY_API_URL: http://45.158.126.171:3003
+        VITE_CONTRACT_API_URL: http://45.158.126.171:3004
+        VITE_COMPLIANCE_API_URL: http://45.158.126.171:3005
+        VITE_LEDGER_API_URL: http://45.158.126.171:3006
+        VITE_CLEARING_API_URL: http://45.158.126.171:3007
+        VITE_APPSTORE_API_URL: http://45.158.126.171:3008
+        VITE_CONNECTOR_API_URL: http://45.158.126.171:3009
+        VITE_TRUSTCORE_CLEARING_API_URL: http://45.158.126.171:3010
+        VITE_TRUSTCORE_CONNECTOR_API_URL: http://45.158.126.171:3011
     ports:
-      - "45.158.126.171:5174:5174"
+      - "0.0.0.0:5174:5174"
     depends_on:
       - idp
       - broker

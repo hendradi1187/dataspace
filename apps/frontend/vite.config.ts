@@ -18,14 +18,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: parseInt(process.env.PORT || '5173', 10),
+    port: parseInt(process.env.PORT || '5174', 10),
     host: '0.0.0.0',
-    proxy: {
-      '/api': {
-        target: 'http://dataspace-idp:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
+    // Proxy disabled - frontend uses direct API calls with VITE_*_API_URL environment variables
+    // proxy: {
+    //   '/api': {
+    //     target: 'http://dataspace-idp:3000',
+    //     changeOrigin: true,
+    //     rewrite: (path) => path.replace(/^\/api/, ''),
+    //   },
+    // },
   },
 });
