@@ -1,16 +1,19 @@
 -- PostgreSQL Database Initialization Script
 -- This script initializes the database for the dataspace platform
 
--- Create database if it doesn't exist
-SELECT 'CREATE DATABASE dataspace_dev' WHERE NOT EXISTS (
-    SELECT FROM pg_database WHERE datname = 'dataspace_dev'
-)\gexec
+-- Connect to default postgres database first
+\connect postgres;
 
--- Connect to the database
+-- Drop database if it exists (fresh start)
+DROP DATABASE IF EXISTS dataspace_dev;
+DROP DATABASE IF EXISTS dataspace_prod;
+
+-- Create database
+CREATE DATABASE dataspace_dev;
+CREATE DATABASE dataspace_prod;
+
+-- Connect to the development database
 \connect dataspace_dev;
-
--- Create schema
-CREATE SCHEMA IF NOT EXISTS public;
 
 -- Set default schema
 SET search_path TO public;
