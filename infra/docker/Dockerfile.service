@@ -2,7 +2,7 @@
 # Supports building any service from services/cts/* directory
 # Usage: docker build --build-arg SERVICE_NAME=idp --build-arg PORT=3000 -t dataspace-idp:latest .
 
-# Stage 1: Builder
+# Stage 1: Builder - Build all libs first
 FROM node:20-alpine AS builder
 
 # Install pnpm globally
@@ -20,41 +20,40 @@ ARG NODE_ENV=production
 ENV SERVICE_NAME=$SERVICE_NAME
 ENV PORT=$PORT
 ENV NODE_ENV=$NODE_ENV
+ENV CI=true
 
 # Set working directory
 WORKDIR /app
 
-# Copy workspace configuration files
-COPY --chown=root:root pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+# Copy workspace configuration files FIRST
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Create directory structure for libs
-RUN mkdir -p libs/validation libs/db libs/clients libs/messages libs/errors libs/types
+# Copy ALL package.json files for workspace resolution
+COPY services/cts/*/package.json ./services/cts/
+COPY libs/*/package.json ./libs/
 
-# Copy root package.json
-COPY --chown=root:root package.json ./
+# Install all workspace dependencies (monorepo mode)
+# This installs dependencies for libs AND all services
+RUN pnpm install --frozen-lockfile
 
-# Copy all service package.json files (for workspace resolution)
-COPY --chown=root:root services/cts/*/package.json ./services/cts/
+# Copy all libs source code
+COPY libs ./libs
 
-# Copy libs package.json files
-COPY --chown=root:root libs/*/package.json ./libs/ 2>/dev/null || true
-
-# Install all workspace dependencies
-RUN pnpm install --no-frozen-lockfile
-
-# Copy libs source code
-COPY --chown=root:root libs ./libs
+# Build ALL libs (required before services can import them)
+RUN for lib in libs/*/; do \
+  if [ -f "$lib/package.json" ] && grep -q '"scripts"' "$lib/package.json"; then \
+    echo "Building $lib..."; \
+    pnpm -C "$lib" run build 2>&1 || echo "No build script in $lib"; \
+  fi; \
+done
 
 # Copy specific service source code
-COPY --chown=root:root services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
+COPY services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
 
-# Install service-specific dependencies (if needed)
-RUN pnpm -C services/cts/$SERVICE_NAME install --no-frozen-lockfile 2>/dev/null || true
+# Build the service (if build script exists)
+RUN pnpm -C services/cts/$SERVICE_NAME run build 2>&1 || echo "No build script in service"
 
-# Build service if build script exists
-RUN pnpm -C services/cts/$SERVICE_NAME run build 2>/dev/null || true
-
-# Stage 2: Runtime
+# Stage 2: Runtime - Minimal image with only what's needed
 FROM node:20-alpine
 
 # Install dumb-init for proper signal handling and curl for health checks
@@ -64,7 +63,7 @@ RUN apk add --no-cache dumb-init curl
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Install pnpm globally in runtime
+# Install pnpm globally (needed for runtime execution)
 RUN npm install -g pnpm@latest
 
 # Accept runtime arguments
@@ -77,24 +76,26 @@ ENV SERVICE_NAME=$SERVICE_NAME
 ENV PORT=$PORT
 ENV NODE_ENV=$NODE_ENV
 ENV PATH=/app/node_modules/.bin:$PATH
+ENV CI=true
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY --chown=nodejs:nodejs pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+# Copy workspace config files
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy libs directory structure
-COPY --chown=nodejs:nodejs --from=builder /app/libs ./libs
+# Copy ONLY necessary directories from builder
+# Copy all built libs with their dist and node_modules
+COPY --from=builder /app/libs ./libs
 
-# Copy built service
-COPY --chown=nodejs:nodejs --from=builder /app/services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
+# Copy service with its source and built output
+COPY --from=builder /app/services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
 
-# Copy node_modules from builder (only production dependencies)
-COPY --chown=nodejs:nodejs --from=builder /app/node_modules ./node_modules
+# Copy ENTIRE node_modules from builder (includes all workspace deps)
+COPY --from=builder /app/node_modules ./node_modules
 
-# Install only production dependencies
-RUN pnpm install --prod --no-frozen-lockfile
+# NO need to run pnpm install again - everything is already installed
+# This significantly reduces image build time and prevents re-installation errors
 
 # Switch to non-root user
 USER nodejs

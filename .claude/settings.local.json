@@ -89,7 +89,8 @@
       "Bash(fi)",
       "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host ''All Node processes stopped''\")",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
