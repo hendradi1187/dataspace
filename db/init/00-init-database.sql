@@ -15,11 +15,10 @@ CREATE SCHEMA IF NOT EXISTS public;
 -- Set default schema
 SET search_path TO public;
 
--- Create extensions
+-- Create extensions (only those available in alpine postgres)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";
-CREATE EXTENSION IF NOT EXISTS "hstore";
-CREATE EXTENSION IF NOT EXISTS "jsonb_plperl" CASCADE;
+-- Note: postgis, hstore, and jsonb_plperl not available in alpine image
+-- They require additional system packages not included in the base image
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE dataspace_dev TO postgres;
