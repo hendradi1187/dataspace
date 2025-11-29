@@ -131,7 +131,7 @@ services:
       test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || echo 'Health check script not found, Kafka should still be operational'"]
       interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 20s
     networks:
       - dataspace-net
@@ -200,8 +200,8 @@ services:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     deploy:
       resources:
         limits:
@@ -252,8 +252,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -302,7 +302,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "0.0.0.0:3001:3001"
+      - "0.0.0.0:3001-3002:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -317,8 +317,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -367,7 +367,7 @@ services:
       LOG_LEVEL: info
       NODE_TLS_REJECT_UNAUTHORIZED: 0
     ports:
-      - "0.0.0.0:3002:3002"
+      - "0.0.0.0:3002-3003:3002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -382,8 +382,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -448,8 +448,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -514,8 +514,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -580,8 +580,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -646,8 +646,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -712,8 +712,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -778,8 +778,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -844,8 +844,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3009/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -910,8 +910,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -972,8 +972,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3011/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
@@ -1013,7 +1013,7 @@ services:
         VITE_TRUSTCORE_CLEARING_API_URL: http://45.158.126.171:3010
         VITE_TRUSTCORE_CONNECTOR_API_URL: http://45.158.126.171:3011
     ports:
-      - "0.0.0.0:5174:5174"
+      - "0.0.0.0:5174-5175:5174"
     depends_on:
       - idp
       - broker
@@ -1034,8 +1034,8 @@ services:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5174"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 45s
     logging:
       driver: "json-file"
       options:
