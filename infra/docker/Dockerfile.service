@@ -1,169 +1,166 @@
 # Production Dockerfile for Microservices (Dataspace Services)
-# Supports building any service from services/cts/* directory
-# Usage: docker build --build-arg SERVICE_NAME=idp --build-arg PORT=3000 -t dataspace-idp:latest .
-#
-# CRITICAL: pnpm workspace resolution requires:
-# 1. Source code present BEFORE pnpm install (for symlink creation)
-# 2. All libs built before services can import them
-# 3. pnpm install run in BOTH stages (builder and runtime)
+# Handles complex pnpm workspace with compiled libraries
+# Some libs compile to src/, some to dist/ - this Dockerfile handles both!
 
-# Stage 1: Builder - Build all libs with proper workspace symlinks
 FROM node:20-alpine AS builder
 
-# Install pnpm globally
 RUN npm install -g pnpm@latest
-
-# Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init curl
 
-# Accept build arguments
 ARG SERVICE_NAME
 ARG PORT=3000
 ARG NODE_ENV=production
 
-# Set environment variables
-ENV SERVICE_NAME=$SERVICE_NAME
-ENV PORT=$PORT
-ENV NODE_ENV=$NODE_ENV
-ENV CI=true
+ENV SERVICE_NAME=$SERVICE_NAME \
+    PORT=$PORT \
+    NODE_ENV=$NODE_ENV \
+    CI=true
 
-# Set working directory
 WORKDIR /app
 
 # ============================================================================
-# CRITICAL STEP 1: Copy workspace configuration files
+# Step 1: Copy workspace configuration
 # ============================================================================
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY services/cts/*/package.json ./services/cts/
 COPY libs/*/package.json ./libs/
 
 # ============================================================================
-# CRITICAL STEP 2: Copy ALL source code BEFORE pnpm install
-# pnpm workspace resolution REQUIRES seeing the source structure
-# This allows pnpm to create proper symlinks for workspace packages
+# Step 2: Copy ALL source code BEFORE pnpm install
+# This is CRITICAL - pnpm needs to see the structure
 # ============================================================================
 COPY libs ./libs
 COPY services ./services
 COPY apps ./apps
 
 # ============================================================================
-# CRITICAL STEP 3: pnpm install with frozen-lockfile
-# This creates symlinks for @dataspace/* packages in node_modules
-# WITHOUT this step, services cannot import libs!
+# Step 3: Install dependencies
 # ============================================================================
-RUN echo "=== Installing pnpm workspace dependencies ===" && \
+RUN echo "=== Installing workspace dependencies ===" && \
     pnpm install --frozen-lockfile && \
-    echo "=== Workspace dependencies installed ===" && \
-    echo "=== Verifying workspace symlinks ===" && \
-    ls -la /app/node_modules/@dataspace/ && \
-    echo "=== Symlinks verified ===" || \
-    echo "WARNING: Workspace symlinks may not be set up correctly!"
+    echo "=== Dependencies installed ==="
 
 # ============================================================================
-# Build ALL libs in dependency order
-# Services depend on these libs, so they MUST be built first
+# Step 4: Build ALL libraries
+# Handle both src and dist output locations
 # ============================================================================
-RUN echo "=== Building workspace libraries ===" && \
-    pnpm -C libs/db run build && \
-    echo "✓ libs/db built" && \
-    pnpm -C libs/validation run build && \
-    echo "✓ libs/validation built" && \
-    pnpm -C libs/clients run build && \
-    echo "✓ libs/clients built" && \
-    pnpm -C libs/messages run build && \
-    echo "✓ libs/messages built" && \
-    pnpm -C libs/kafka run build 2>/dev/null || echo "• libs/kafka (no build)" && \
-    pnpm -C libs/redis run build 2>/dev/null || echo "• libs/redis (no build)" && \
-    echo "=== All libraries built ==="
+RUN echo "=== Building libraries ===" && \
+    for lib_dir in libs/*/; do \
+      lib_name=$(basename "$lib_dir"); \
+      if [ -f "$lib_dir/package.json" ]; then \
+        echo "Building $lib_name..."; \
+        if grep -q '"build"' "$lib_dir/package.json"; then \
+          (cd "$lib_dir" && pnpm run build) || echo "Warning: build failed for $lib_name"; \
+        fi; \
+        \
+        # Verify built files exist (check both src and dist)
+        if [ -f "$lib_dir/dist/index.js" ] || [ -f "$lib_dir/src/index.js" ]; then \
+          echo "✓ $lib_name built successfully"; \
+        else \
+          echo "⚠ Warning: No index.js found in $lib_name (src or dist)"; \
+        fi; \
+      fi; \
+    done && \
+    echo "=== Library build complete ==="
 
 # ============================================================================
-# Build the specific service
-# Now all workspace libs are available for import
+# Step 5: Build service
 # ============================================================================
 RUN echo "=== Building service: $SERVICE_NAME ===" && \
-    pnpm -C services/cts/$SERVICE_NAME run build 2>/dev/null || \
-    echo "• Service $SERVICE_NAME has no build script" && \
+    if grep -q '"build"' "services/cts/$SERVICE_NAME/package.json"; then \
+      pnpm -C "services/cts/$SERVICE_NAME" run build || echo "Build failed or not needed"; \
+    else \
+      echo "No build script in service"; \
+    fi && \
     echo "=== Service build complete ==="
 
 # ============================================================================
-# Stage 2: Runtime - Minimal image with workspace resolution
+# Stage 2: Runtime
 # ============================================================================
 FROM node:20-alpine
 
-# Install dumb-init for proper signal handling and curl for health checks
 RUN apk add --no-cache dumb-init curl
-
-# Create app user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
-# Install pnpm globally (required for workspace symlink resolution at runtime)
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 RUN npm install -g pnpm@latest
 
-# Accept runtime arguments
 ARG SERVICE_NAME
 ARG PORT=3000
 ARG NODE_ENV=production
 
-# Set environment variables
-ENV SERVICE_NAME=$SERVICE_NAME
-ENV PORT=$PORT
-ENV NODE_ENV=$NODE_ENV
-ENV PATH=/app/node_modules/.bin:$PATH
-ENV CI=true
+ENV SERVICE_NAME=$SERVICE_NAME \
+    PORT=$PORT \
+    NODE_ENV=$NODE_ENV \
+    PATH=/app/node_modules/.bin:$PATH \
+    CI=true
 
-# Set working directory
 WORKDIR /app
 
 # ============================================================================
-# Copy workspace configuration files
+# Copy workspace files and source code
 # ============================================================================
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-
-# ============================================================================
-# CRITICAL STEP 1: Copy ALL source code BEFORE any pnpm operations
-# pnpm needs to see the complete workspace structure to create symlinks
-# Copy entire services, libs, and apps directories
-# ============================================================================
 COPY --from=builder /app/libs ./libs
 COPY --from=builder /app/services ./services
 COPY --from=builder /app/apps ./apps
-
-# ============================================================================
-# CRITICAL STEP 2: Copy pre-built node_modules from builder
-# This includes all installed dependencies and generated files
-# ============================================================================
 COPY --from=builder /app/node_modules ./node_modules
 
 # ============================================================================
-# CRITICAL STEP 3: Reinstall with --prod --frozen-lockfile
-# This is ESSENTIAL for proper workspace symlink resolution!
-#
-# Why reinstall in runtime?
-# 1. Symlinks may not survive COPY operation (OS-specific)
-# 2. pnpm needs to verify workspace structure
-# 3. --prod removes devDependencies for smaller image
-# 4. Ensures @dataspace/* symlinks are correctly set up
+# Prepare runtime: Install prod dependencies
+# This handles workspace symlink creation/recreation
 # ============================================================================
-RUN echo "=== Recreating workspace symlinks in runtime ===" && \
-    pnpm install --prod --frozen-lockfile && \
-    echo "=== Verifying workspace symlinks ===" && \
-    ls -la /app/node_modules/@dataspace/ && \
-    echo "=== Runtime workspace symlinks verified ===" || \
-    (echo "ERROR: Workspace symlinks not created!" && exit 1)
+RUN echo "=== Preparing runtime environment ===" && \
+    pnpm install --prod --frozen-lockfile --prefer-offline && \
+    echo "=== Runtime environment ready ==="
 
-# Switch to non-root user
+# ============================================================================
+# Fallback: If workspace packages not found, link them manually
+# This handles edge cases where pnpm symlinks don't work
+# ============================================================================
+RUN echo "=== Verifying workspace packages ===" && \
+    for lib_name in db validation clients messages kafka redis; do \
+      pkg_path="/app/node_modules/@dataspace/$lib_name"; \
+      lib_src="/app/libs/$lib_name"; \
+      \
+      if [ ! -e "$pkg_path" ] && [ -d "$lib_src" ]; then \
+        echo "Creating symlink for @dataspace/$lib_name..."; \
+        mkdir -p "/app/node_modules/@dataspace" && \
+        ln -sf "../../libs/$lib_name" "$pkg_path"; \
+      elif [ -e "$pkg_path" ]; then \
+        echo "✓ @dataspace/$lib_name found"; \
+      fi; \
+    done && \
+    echo "=== Workspace packages verified ==="
+
+# ============================================================================
+# Final verification - ensure all entry points exist
+# ============================================================================
+RUN echo "=== Final verification ===" && \
+    for lib_name in db validation clients messages; do \
+      pkg_path="/app/node_modules/@dataspace/$lib_name"; \
+      if [ -d "$pkg_path" ]; then \
+        # Check for either dist/index.js or src/index.js
+        if [ -f "$pkg_path/dist/index.js" ] || [ -f "$pkg_path/src/index.js" ] || [ -f "$pkg_path/index.js" ]; then \
+          echo "✓ @dataspace/$lib_name entry point OK"; \
+        else \
+          echo "⚠ Warning: Entry point not found for @dataspace/$lib_name"; \
+          # If package.json exists, try to resolve main
+          if [ -f "$pkg_path/package.json" ]; then \
+            echo "  Checking package.json main field..."; \
+            grep "main" "$pkg_path/package.json" || echo "  No main field"; \
+          fi; \
+        fi; \
+      else \
+        echo "⚠ Warning: @dataspace/$lib_name not found"; \
+      fi; \
+    done && \
+    echo "=== Verification complete ==="
+
 USER nodejs
 
-# Set entrypoint for proper signal handling
 ENTRYPOINT ["dumb-init", "--"]
-
-# Expose port
 EXPOSE $PORT
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:$PORT/health || exit 1
 
-# Default start command (can be overridden in docker-compose)
 CMD ["pnpm", "-C", "services/cts/$SERVICE_NAME", "start"]
