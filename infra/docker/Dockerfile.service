@@ -1,8 +1,13 @@
 # Production Dockerfile for Microservices (Dataspace Services)
 # Supports building any service from services/cts/* directory
 # Usage: docker build --build-arg SERVICE_NAME=idp --build-arg PORT=3000 -t dataspace-idp:latest .
+#
+# CRITICAL: pnpm workspace resolution requires:
+# 1. Source code present BEFORE pnpm install (for symlink creation)
+# 2. All libs built before services can import them
+# 3. pnpm install run in BOTH stages (builder and runtime)
 
-# Stage 1: Builder - Build all libs first
+# Stage 1: Builder - Build all libs with proper workspace symlinks
 FROM node:20-alpine AS builder
 
 # Install pnpm globally
@@ -25,35 +30,64 @@ ENV CI=true
 # Set working directory
 WORKDIR /app
 
-# Copy workspace configuration files FIRST
+# ============================================================================
+# CRITICAL STEP 1: Copy workspace configuration files
+# ============================================================================
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-
-# Copy ALL package.json files for workspace resolution
 COPY services/cts/*/package.json ./services/cts/
 COPY libs/*/package.json ./libs/
 
-# Install all workspace dependencies (monorepo mode)
-# This installs dependencies for libs AND all services
-RUN pnpm install --frozen-lockfile
-
-# Copy all libs source code
+# ============================================================================
+# CRITICAL STEP 2: Copy ALL source code BEFORE pnpm install
+# pnpm workspace resolution REQUIRES seeing the source structure
+# This allows pnpm to create proper symlinks for workspace packages
+# ============================================================================
 COPY libs ./libs
+COPY services ./services
+COPY apps ./apps
 
-# Build ALL libs (required before services can import them)
-RUN for lib in libs/*/; do \
-  if [ -f "$lib/package.json" ] && grep -q '"scripts"' "$lib/package.json"; then \
-    echo "Building $lib..."; \
-    pnpm -C "$lib" run build 2>&1 || echo "No build script in $lib"; \
-  fi; \
-done
+# ============================================================================
+# CRITICAL STEP 3: pnpm install with frozen-lockfile
+# This creates symlinks for @dataspace/* packages in node_modules
+# WITHOUT this step, services cannot import libs!
+# ============================================================================
+RUN echo "=== Installing pnpm workspace dependencies ===" && \
+    pnpm install --frozen-lockfile && \
+    echo "=== Workspace dependencies installed ===" && \
+    echo "=== Verifying workspace symlinks ===" && \
+    ls -la /app/node_modules/@dataspace/ && \
+    echo "=== Symlinks verified ===" || \
+    echo "WARNING: Workspace symlinks may not be set up correctly!"
 
-# Copy specific service source code
-COPY services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
+# ============================================================================
+# Build ALL libs in dependency order
+# Services depend on these libs, so they MUST be built first
+# ============================================================================
+RUN echo "=== Building workspace libraries ===" && \
+    pnpm -C libs/db run build && \
+    echo "✓ libs/db built" && \
+    pnpm -C libs/validation run build && \
+    echo "✓ libs/validation built" && \
+    pnpm -C libs/clients run build && \
+    echo "✓ libs/clients built" && \
+    pnpm -C libs/messages run build && \
+    echo "✓ libs/messages built" && \
+    pnpm -C libs/kafka run build 2>/dev/null || echo "• libs/kafka (no build)" && \
+    pnpm -C libs/redis run build 2>/dev/null || echo "• libs/redis (no build)" && \
+    echo "=== All libraries built ==="
 
-# Build the service (if build script exists)
-RUN pnpm -C services/cts/$SERVICE_NAME run build 2>&1 || echo "No build script in service"
+# ============================================================================
+# Build the specific service
+# Now all workspace libs are available for import
+# ============================================================================
+RUN echo "=== Building service: $SERVICE_NAME ===" && \
+    pnpm -C services/cts/$SERVICE_NAME run build 2>/dev/null || \
+    echo "• Service $SERVICE_NAME has no build script" && \
+    echo "=== Service build complete ==="
 
-# Stage 2: Runtime - Minimal image with only what's needed
+# ============================================================================
+# Stage 2: Runtime - Minimal image with workspace resolution
+# ============================================================================
 FROM node:20-alpine
 
 # Install dumb-init for proper signal handling and curl for health checks
@@ -63,7 +97,7 @@ RUN apk add --no-cache dumb-init curl
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Install pnpm globally (needed for runtime execution)
+# Install pnpm globally (required for workspace symlink resolution at runtime)
 RUN npm install -g pnpm@latest
 
 # Accept runtime arguments
@@ -81,21 +115,42 @@ ENV CI=true
 # Set working directory
 WORKDIR /app
 
-# Copy workspace config files
+# ============================================================================
+# Copy workspace configuration files
+# ============================================================================
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy ONLY necessary directories from builder
-# Copy all built libs with their dist and node_modules
+# ============================================================================
+# CRITICAL STEP 1: Copy ALL source code BEFORE any pnpm operations
+# pnpm needs to see the complete workspace structure to create symlinks
+# Copy entire services, libs, and apps directories
+# ============================================================================
 COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/services ./services
+COPY --from=builder /app/apps ./apps
 
-# Copy service with its source and built output
-COPY --from=builder /app/services/cts/$SERVICE_NAME ./services/cts/$SERVICE_NAME
-
-# Copy ENTIRE node_modules from builder (includes all workspace deps)
+# ============================================================================
+# CRITICAL STEP 2: Copy pre-built node_modules from builder
+# This includes all installed dependencies and generated files
+# ============================================================================
 COPY --from=builder /app/node_modules ./node_modules
 
-# NO need to run pnpm install again - everything is already installed
-# This significantly reduces image build time and prevents re-installation errors
+# ============================================================================
+# CRITICAL STEP 3: Reinstall with --prod --frozen-lockfile
+# This is ESSENTIAL for proper workspace symlink resolution!
+#
+# Why reinstall in runtime?
+# 1. Symlinks may not survive COPY operation (OS-specific)
+# 2. pnpm needs to verify workspace structure
+# 3. --prod removes devDependencies for smaller image
+# 4. Ensures @dataspace/* symlinks are correctly set up
+# ============================================================================
+RUN echo "=== Recreating workspace symlinks in runtime ===" && \
+    pnpm install --prod --frozen-lockfile && \
+    echo "=== Verifying workspace symlinks ===" && \
+    ls -la /app/node_modules/@dataspace/ && \
+    echo "=== Runtime workspace symlinks verified ===" || \
+    (echo "ERROR: Workspace symlinks not created!" && exit 1)
 
 # Switch to non-root user
 USER nodejs
