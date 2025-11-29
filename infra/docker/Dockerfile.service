@@ -160,7 +160,8 @@ USER nodejs
 ENTRYPOINT ["dumb-init", "--"]
 EXPOSE $PORT
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=5 \
   CMD curl -f http://localhost:$PORT/health || exit 1
 
-CMD ["pnpm", "-C", "services/cts/$SERVICE_NAME", "start"]
+# Run compiled service directly (services are already built in builder stage)
+CMD node services/cts/$SERVICE_NAME/dist/index.js
