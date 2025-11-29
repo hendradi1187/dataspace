@@ -1,6 +1,9 @@
 -- Database Seed Data
 -- This script populates initial test data for development
 
+-- Connect to the development database
+\connect dataspace_dev;
+
 SET search_path TO public;
 
 -- ============================================================================

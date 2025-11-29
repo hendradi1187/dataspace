@@ -1,6 +1,9 @@
 -- Database Schema Initialization
 -- This script creates all necessary tables for the dataspace platform
 
+-- Connect to the development database
+\connect dataspace_dev;
+
 SET search_path TO public;
 
 -- ============================================================================
