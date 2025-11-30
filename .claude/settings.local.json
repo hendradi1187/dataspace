@@ -90,7 +90,8 @@
       "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host ''All Node processes stopped''\")",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(do sed -i 's/COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml/COPY --chown=nodejs:nodejs tsconfig.json package.json pnpm-workspace.yaml pnpm-lock.yaml/' \"$file\")"
     ],
     "deny": [],
     "ask": []

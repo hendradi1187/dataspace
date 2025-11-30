@@ -19,9 +19,9 @@ ENV SERVICE_NAME=$SERVICE_NAME \
 WORKDIR /app
 
 # ============================================================================
-# Step 1: Copy workspace configuration
+# Step 1: Copy workspace configuration and root config files
 # ============================================================================
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY tsconfig.json pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY services/cts/*/package.json ./services/cts/
 COPY libs/*/package.json ./libs/
 
