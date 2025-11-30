@@ -17,25 +17,20 @@ WORKDIR /app
 # Copy root package.json and pnpm files for workspace
 COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
-# Copy all service package.json files
+# Copy all package.json files FIRST (pnpm needs to see the structure)
 COPY --chown=nodejs:nodejs services/cts/*/package.json ./services/cts/
 COPY --chown=nodejs:nodejs libs/*/package.json ./libs/
 COPY --chown=nodejs:nodejs apps/frontend/package.json ./apps/frontend/
 
-# Create directory structure for libs
-RUN mkdir -p libs/validation libs/db libs/clients libs/messages
+# Copy ALL source code BEFORE pnpm install
+# This is critical - pnpm needs to see the actual code for workspace linking
+COPY --chown=nodejs:nodejs libs ./libs
+COPY --chown=nodejs:nodejs services/cts/trustcore-contract ./services/cts/trustcore-contract
+COPY --chown=nodejs:nodejs apps ./apps
 
 # Install all dependencies from lock file (workspace mode)
+# This will properly create symlinks for @dataspace/* packages
 RUN pnpm install --no-frozen-lockfile
-
-# Copy libs source code
-COPY --chown=nodejs:nodejs libs ./libs
-
-# Copy service source code
-COPY --chown=nodejs:nodejs services/cts/trustcore-contract ./services/cts/trustcore-contract
-# Install service-specific node_modules
-RUN pnpm -C services/cts/trustcore-contract install --no-frozen-lockfile
-COPY --chown=nodejs:nodejs services/cts/trustcore-contract ./services/cts/trustcore-contract
 
 # Switch to non-root user
 USER nodejs
