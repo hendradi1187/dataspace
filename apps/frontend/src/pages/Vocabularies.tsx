@@ -75,7 +75,7 @@ export const Vocabularies = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: Vocabulary) => (
+      render: (_value: unknown, item: Vocabulary) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -140,11 +140,11 @@ export const Vocabularies = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              vocabulariesService.update(id, updateData as any)
+              vocabulariesService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              vocabulariesService.create(createData as any)
+              vocabulariesService.create(createData)
             );
           }
         }}

@@ -37,7 +37,7 @@ COPY apps ./apps
 # Step 3: Install dependencies (including devDependencies for build)
 # ============================================================================
 RUN echo "=== Installing workspace dependencies (with devDeps) ===" && \
-    pnpm install --frozen-lockfile --shamefully-hoist && \
+    pnpm install --frozen-lockfile && \
     echo "=== Dependencies installed ===" && \
     echo "=== Checking for TypeScript ===" && \
     which tsc || (npm install -g typescript && echo "Installed TypeScript globally") && \

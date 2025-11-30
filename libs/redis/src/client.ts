@@ -27,12 +27,10 @@ class RedisClient {
   async connect(): Promise<void> {
     try {
       this.client = createClient({
-        host: this.config.host,
-        port: this.config.port,
+        url: `redis://${this.config.host}:${this.config.port}`,
         password: this.config.password,
-        db: this.config.database,
         socket: {
-          reconnectStrategy: (retries) => {
+          reconnectStrategy: (retries: number) => {
             if (retries > (this.config.maxRetries || 10)) {
               logger.error('Max Redis connection retries exceeded');
               return new Error('Max Redis connection retries exceeded');
@@ -40,13 +38,15 @@ class RedisClient {
             return Math.min(retries * 50, 500);
           },
         },
-      } as any);
+      }) as any;
 
-      this.client.on('error', (err) => logger.error('Redis error:', err));
-      this.client.on('connect', () => logger.info('Redis connected'));
-      this.client.on('reconnecting', () => logger.warn('Redis reconnecting...'));
+      if (this.client) {
+        this.client.on('error', (err) => logger.error('Redis error:', err));
+        this.client.on('connect', () => logger.info('Redis connected'));
+        this.client.on('reconnecting', () => logger.warn('Redis reconnecting...'));
 
-      await this.client.connect();
+        await this.client.connect();
+      }
       logger.info(`Redis connected to ${this.config.host}:${this.config.port}`);
     } catch (error) {
       logger.error('Failed to connect to Redis:', error);
@@ -105,7 +105,8 @@ class RedisClient {
 
   async expire(key: string, seconds: number): Promise<boolean> {
     if (!this.client) throw new Error('Redis client not connected');
-    return (await this.client.expire(key, seconds)) > 0;
+    const result = await this.client.expire(key, seconds);
+    return (result as unknown as number) > 0;
   }
 
   async ttl(key: string): Promise<number> {
@@ -165,7 +166,8 @@ class RedisClient {
 
   async hget(key: string, field: string): Promise<string | null> {
     if (!this.client) throw new Error('Redis client not connected');
-    return this.client.hGet(key, field);
+    const value = await this.client.hGet(key, field);
+    return value ?? null;
   }
 
   async hgetall(key: string): Promise<Record<string, string>> {

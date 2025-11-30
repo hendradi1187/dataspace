@@ -97,7 +97,7 @@ export const Policies = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: Policy) => (
+      render: (_value: unknown, item: Policy) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -163,11 +163,11 @@ export const Policies = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              policiesService.update(id, updateData as any)
+              policiesService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              policiesService.create(createData as any)
+              policiesService.create(createData)
             );
           }
         }}

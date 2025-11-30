@@ -2,9 +2,10 @@
   "extends": "../../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "./src",
+    "baseUrl": "./src",
     "skipLibCheck": true,
-    "noImplicitAny": false
+    "noImplicitAny": true
   },
   "include": [
     "src"

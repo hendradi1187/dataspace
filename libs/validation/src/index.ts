@@ -1,4 +1,4 @@
-import Ajv from 'ajv';
+import Ajv, { JSONSchemaType, ValidateFunction, ErrorObject } from 'ajv';
 
 // Initialize AJV validator
 const ajv = new Ajv({
@@ -15,7 +15,7 @@ export { ajv };
  * @param data Data to validate
  * @returns boolean indicating if data is valid
  */
-export const validate = (schema: any, data: any): boolean => {
+export const validate = (schema: JSONSchemaType<unknown>, data: unknown): boolean => {
   const validator = ajv.compile(schema);
   return validator(data);
 };
@@ -26,7 +26,7 @@ export const validate = (schema: any, data: any): boolean => {
  * @param data Data to validate
  * @returns validation errors or null if valid
  */
-export const validateWithErrors = (schema: any, data: any): any[] | null => {
+export const validateWithErrors = (schema: JSONSchemaType<unknown>, data: unknown): ErrorObject[] | null => {
   const validator = ajv.compile(schema);
   const valid = validator(data);
   return valid ? null : (validator.errors || []);

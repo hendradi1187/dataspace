@@ -133,7 +133,7 @@ export const Participants = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: Participant) => (
+      render: (_value: unknown, item: Participant) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -211,11 +211,11 @@ export const Participants = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              participantsService.update(id, updateData as any)
+              participantsService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              participantsService.create(createData as any)
+              participantsService.create(createData)
             );
           }
         }}

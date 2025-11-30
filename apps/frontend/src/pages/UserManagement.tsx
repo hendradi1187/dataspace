@@ -77,14 +77,14 @@ export const UserManagement = () => {
 
     try {
       if (editingUser) {
-        await usersService.update(editingUser.id, formData as any);
+        await usersService.update(editingUser.id, formData);
         addNotification({
           type: 'success',
           title: 'User Updated',
           message: `User ${formData.name} updated successfully`,
         });
       } else {
-        await usersService.create(formData as any);
+        await usersService.create(formData);
         addNotification({
           type: 'success',
           title: 'User Created',

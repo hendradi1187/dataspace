@@ -100,7 +100,7 @@ export const Contracts = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: Contract) => (
+      render: (_value: unknown, item: Contract) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -166,11 +166,11 @@ export const Contracts = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              contractsService.update(id, updateData as any)
+              contractsService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              contractsService.create(createData as any)
+              contractsService.create(createData)
             );
           }
         }}

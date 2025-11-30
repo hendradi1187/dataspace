@@ -21,6 +21,8 @@
     "libs/db",
     "libs/clients",
     "libs/messages",
+    "libs/kafka",
+    "libs/redis",
     "apps/frontend"
   ],
   "scripts": {

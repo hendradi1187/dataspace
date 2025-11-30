@@ -75,7 +75,7 @@ export const Schemas = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: Schema) => (
+      render: (_value: unknown, item: Schema) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -140,11 +140,11 @@ export const Schemas = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              schemasService.update(id, updateData as any)
+              schemasService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              schemasService.create(createData as any)
+              schemasService.create(createData)
             );
           }
         }}

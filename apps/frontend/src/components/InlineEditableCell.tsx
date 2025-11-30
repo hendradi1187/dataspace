@@ -76,7 +76,7 @@ export const InlineEditableCell = ({
     <div className="flex items-center gap-1 p-1">
       {options ? (
         <select
-          ref={inputRef as any}
+          ref={inputRef}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave}
@@ -91,7 +91,7 @@ export const InlineEditableCell = ({
         </select>
       ) : (
         <input
-          ref={inputRef as any}
+          ref={inputRef}
           type={type}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}

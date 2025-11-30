@@ -64,7 +64,7 @@ export const Table = <T extends { id: string }>({
               onClick={() => onRowClick?.(row)}
             >
               {columns.map((column) => {
-                const value = (row as any)[column.key as keyof T];
+                const value = row[column.key as keyof T];
                 return (
                   <td
                     key={String(column.key)}

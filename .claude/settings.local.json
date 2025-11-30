@@ -92,7 +92,21 @@
       "Bash(git push:*)",
       "Bash(git add:*)",
       "Bash(do sed -i 's/COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml/COPY --chown=nodejs:nodejs tsconfig.json package.json pnpm-workspace.yaml pnpm-lock.yaml/' \"$file\")",
-      "Bash(else)"
+      "Bash(else)",
+      "Bash(do [ ! -f \"D:/Project/dataspace/services/cts/$svc/tsconfig.json\" ])",
+      "Bash(while read svc)",
+      "Bash(do if [ ! -f \"D:/Project/dataspace/services/cts/$svc/tsconfig.json\" ])",
+      "Bash(then echo \"MISSING: services/cts/$svc/tsconfig.json\")",
+      "Bash(CI=true pnpm install:*)",
+      "Bash(pnpm -r --filter=\"./libs/*\" run build)",
+      "Bash(pnpm -C libs/kafka run build:*)",
+      "Bash(pnpm -C libs/redis run build)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(pnpm -C services/cts/broker run build)",
+      "Bash(pnpm -C services/cts/idp run build)",
+      "Bash(pnpm:*)",
+      "Bash(do sed -i 's/\"\"rootDir\"\": \"\"\\.\"\"/\"\"rootDir\"\": \"\".\\/src\"\"/g' \"$file\")",
+      "Bash(do echo \"\")"
     ],
     "deny": [],
     "ask": []

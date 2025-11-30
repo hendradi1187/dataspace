@@ -15,24 +15,19 @@ RUN npm install -g pnpm@latest
 WORKDIR /app
 
 # Copy root package.json and pnpm files for workspace
-COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --chown=nodejs:nodejs tsconfig.json package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
 # Copy all service package.json files
 COPY --chown=nodejs:nodejs services/cts/*/package.json ./services/cts/
 COPY --chown=nodejs:nodejs libs/*/package.json ./libs/
 COPY --chown=nodejs:nodejs apps/frontend/package.json ./apps/frontend/
 
-# Create directory structure for libs
-RUN mkdir -p libs/validation libs/db libs/clients libs/messages
+# Copy source code BEFORE install for proper workspace symlinks
+COPY --chown=nodejs:nodejs libs ./libs
+COPY --chown=nodejs:nodejs apps/frontend ./apps/frontend
 
 # Install all dependencies from lock file (workspace mode)
 RUN pnpm install --no-frozen-lockfile
-
-# Copy libs source code
-COPY --chown=nodejs:nodejs libs ./libs
-
-# Copy frontend source
-COPY --chown=nodejs:nodejs apps/frontend ./apps/frontend
 
 # Install frontend-specific node_modules
 RUN pnpm -C apps/frontend install --no-frozen-lockfile

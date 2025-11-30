@@ -74,7 +74,7 @@ export const Apps = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: App) => (
+      render: (_value: unknown, item: App) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -139,11 +139,11 @@ export const Apps = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              appsService.update(id, updateData as any)
+              appsService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              appsService.create(createData as any)
+              appsService.create(createData)
             );
           }
         }}

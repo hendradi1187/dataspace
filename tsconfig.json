@@ -18,7 +18,9 @@
       "@dataspace/validation": ["./libs/validation/src"],
       "@dataspace/db": ["./libs/db/src"],
       "@dataspace/clients": ["./libs/clients/src"],
-      "@dataspace/messages": ["./libs/messages/src"]
+      "@dataspace/messages": ["./libs/messages/src"],
+      "@dataspace/kafka": ["./libs/kafka/src"],
+      "@dataspace/redis": ["./libs/redis/src"]
     }
   },
   "include": ["src"],

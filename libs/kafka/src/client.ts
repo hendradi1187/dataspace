@@ -25,14 +25,13 @@ class KafkaClient {
     this.kafka = new Kafka({
       clientId: config.clientId,
       brokers: config.brokers,
-      logLevel: config.logLevel || 'WARN',
+      logLevel: (config.logLevel || 'WARN') as any,
       ssl: config.ssl || false,
-      sasl: config.sasl,
+      sasl: config.sasl as any,
       retry: {
         maxRetryTime: 30000,
         initialRetryTime: 100,
         multiplier: 2,
-        randomizationFactor: 0.2,
         retries: 8,
       },
       connectionTimeout: 10000,
@@ -122,7 +121,7 @@ class KafkaClient {
       });
 
       await consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
+        eachMessage: async ({ topic, partition, message }: { topic: string; partition: number; message: any }) => {
           try {
             const value = message.value
               ? JSON.parse(message.value.toString())

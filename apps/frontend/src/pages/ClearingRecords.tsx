@@ -74,7 +74,7 @@ export const ClearingRecords = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: ClearingRecord) => (
+      render: (_value: unknown, item: ClearingRecord) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -139,11 +139,11 @@ export const ClearingRecords = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              clearingService.update(id, updateData as any)
+              clearingService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              clearingService.create(createData as any)
+              clearingService.create(createData)
             );
           }
         }}

@@ -83,7 +83,7 @@ export const ComplianceRecords = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: ComplianceRecord) => (
+      render: (_value: unknown, item: ComplianceRecord) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -148,11 +148,11 @@ export const ComplianceRecords = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              complianceService.update(id, updateData as any)
+              complianceService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              complianceService.create(createData as any)
+              complianceService.create(createData)
             );
           }
         }}

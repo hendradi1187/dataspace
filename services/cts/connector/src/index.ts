@@ -155,7 +155,7 @@ async function start() {
     '/connectors',
     async (request, reply) => {
       try {
-        const { name, description, connectorType, config, status } = request.body;
+        const { name, description, connectorType, config, status } = request.body as any;
 
         if (!name) {
           return reply.status(400).send({
@@ -204,7 +204,7 @@ async function start() {
     async (request, reply) => {
       try {
         const { id } = request.params;
-        const { name, description, connectorType, config, status } = request.body;
+        const { name, description, connectorType, config, status } = request.body as any;
 
         const updateFields: string[] = [];
         const values: any[] = [];

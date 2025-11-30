@@ -74,7 +74,7 @@ export const Datasets = () => {
       key: 'actions' as const,
       label: 'Actions',
       sortable: false,
-      render: (_value: any, item: Dataset) => (
+      render: (_value: unknown, item: Dataset) => (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
@@ -139,11 +139,11 @@ export const Datasets = () => {
         onSubmit={async (data) => {
           if (selectedItem) {
             await handleUpdate(selectedItem.id, data, (id, updateData) =>
-              datasetsService.update(id, updateData as any)
+              datasetsService.update(id, updateData)
             );
           } else {
             await handleCreate(data, (createData) =>
-              datasetsService.create(createData as any)
+              datasetsService.create(createData)
             );
           }
         }}
