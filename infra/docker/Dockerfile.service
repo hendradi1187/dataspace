@@ -34,30 +34,27 @@ COPY services ./services
 COPY apps ./apps
 
 # ============================================================================
-# Step 3: Install dependencies
+# Step 3: Install dependencies (including devDependencies for build)
 # ============================================================================
-RUN echo "=== Installing workspace dependencies ===" && \
+RUN echo "=== Installing workspace dependencies (with devDeps) ===" && \
     pnpm install --frozen-lockfile && \
     echo "=== Dependencies installed ==="
 
 # ============================================================================
-# Step 4: Build ALL libraries
-# Handle both src and dist output locations
+# Step 4: Build libraries that have build scripts
+# Only build libraries that have src code and proper configuration
 # ============================================================================
 RUN echo "=== Building libraries ===" && \
     for lib_dir in libs/*/; do \
       lib_name=$(basename "$lib_dir"); \
       if [ -f "$lib_dir/package.json" ]; then \
-        echo "Building $lib_name..."; \
         if grep -q '"build"' "$lib_dir/package.json"; then \
-          (cd "$lib_dir" && pnpm run build) || echo "Warning: build failed for $lib_name"; \
-        fi; \
-        \
-        # Verify built files exist (check both src and dist)
-        if [ -f "$lib_dir/dist/index.js" ] || [ -f "$lib_dir/src/index.js" ]; then \
-          echo "✓ $lib_name built successfully"; \
-        else \
-          echo "⚠ Warning: No index.js found in $lib_name (src or dist)"; \
+          echo "Building $lib_name..."; \
+          if [ -d "$lib_dir/src" ] && [ "$(find "$lib_dir/src" -type f -name '*.ts' | wc -l)" -gt 0 ]; then \
+            (cd "$lib_dir" && pnpm run build) && echo "✓ $lib_name built successfully" || echo "⚠ Warning: Build failed for $lib_name (using src code if available)"; \
+          else \
+            echo "⊘ Skipping $lib_name - no TypeScript source files"; \
+          fi; \
         fi; \
       fi; \
     done && \
