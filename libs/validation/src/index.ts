@@ -29,5 +29,5 @@ export const validate = (schema: any, data: any): boolean => {
 export const validateWithErrors = (schema: any, data: any): any[] | null => {
   const validator = ajv.compile(schema);
   const valid = validator(data);
-  return valid ? null : validator.errors;
+  return valid ? null : (validator.errors || []);
 };

@@ -91,7 +91,8 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git add:*)",
-      "Bash(do sed -i 's/COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml/COPY --chown=nodejs:nodejs tsconfig.json package.json pnpm-workspace.yaml pnpm-lock.yaml/' \"$file\")"
+      "Bash(do sed -i 's/COPY --chown=nodejs:nodejs package.json pnpm-workspace.yaml pnpm-lock.yaml/COPY --chown=nodejs:nodejs tsconfig.json package.json pnpm-workspace.yaml pnpm-lock.yaml/' \"$file\")",
+      "Bash(else)"
     ],
     "deny": [],
     "ask": []
